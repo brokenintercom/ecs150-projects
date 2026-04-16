@@ -1,0 +1,5 @@
+[31mtest 1: rc incorrect[0m
+  what results should be found in file: tests/1.rc
+  what results produced by your program: tests-out/1.rc
+  compare the two using diff, cmp, or related tools to debug, e.g.:
+  prompt> diff tests/1.rc tests-out/1.rc
