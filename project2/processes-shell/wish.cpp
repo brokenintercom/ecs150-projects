@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <queue>
+#include <string>
 #include <cstring>
 
 #include <stdlib.h>
@@ -49,9 +50,29 @@ vector<string> Input_Reader(string input)
     vector<string> input_vector;
     string cmd;
 
+    // split up commands using &
+    // ls>output & path /bin -> <ls>output, path /bin>
     while(getline(input_stream, cmd, '&'))
     {
-        input_vector.push_back(cmd);
+        // create the new adjusted string before pushing it into the vector
+        // infinite loop otherwise teehee
+        string fixed_string = "";
+        
+        // first, check for > amongs strings, and if found separate it from the other words it's stuck between before separating out to separate args
+        for (size_t let_pos = 0; let_pos < cmd.length(); let_pos++)
+        {
+            if (cmd[let_pos] == '>')
+            {
+                fixed_string += " > ";
+            }
+
+            else 
+            {
+                fixed_string += cmd[let_pos];
+            }
+        }
+
+        input_vector.push_back(fixed_string);
     }
 
     return input_vector;
@@ -70,6 +91,12 @@ int main(int argc, char *argv[])
     istream* input_mode = &cin; // istream represents input stream, so can use either cin or ifstream for input depending on mode
     ifstream file; // file input, can assign input to this address instead of cin address 
     string input;
+
+    // output to a file or the screen via dup2
+    int newfd;
+
+    // would only have ./wish as input, so argc == 1
+    if (argc == 1) { interactive_mode = true; }
 
     // batch mode input = ./wish tests/1.in, so arc = 2
     if (argc == 2)
@@ -105,6 +132,8 @@ int main(int argc, char *argv[])
             write(STDOUT_FILENO, "wish> ", strlen("wish> "));
         }
 
+        // getline() takes input from either files or cin. Can set in if statement like this to immediately check if
+        // if succeeded, just puts input into our input string. If not, then it's a fail
         if (!getline(*input_mode, input))
         {
             exit(0);
@@ -194,6 +223,7 @@ int main(int argc, char *argv[])
                 // get the path command that the user want to do
                 string path = split_args_vec[0];
                 string full_path = Path_checker(path, active_paths);
+                string output_file;
                 
                 // if the path is valid, do stuff
                 if (!full_path.empty())
@@ -207,12 +237,51 @@ int main(int argc, char *argv[])
                         vector<char*> argv_vec;
                         for (size_t i = 0; i < split_args_vec.size(); i++)
                         {
+                            // if we see ">", we should stop immediatley, as the element after > is the output file
+                            if (split_args_vec[i] == ">")
+                            {
+                                // error check: if there's more than 1 element after the >, 0 elements after the >, or a > right after the >, it's an error
+                                if ((split_args_vec.size() - 1 != i + 1) || (split_args_vec[i + 1] == ">") || (split_args_vec.size() < 3))
+                                {
+                                    write(STDERR_FILENO, error_message, strlen(error_message)); 
+                                    exit(1);
+                                }
+
+                                // get the file we'll be outputting to
+                                output_file = split_args_vec[i + 1];
+                                break;
+                            }
+
                             // convert strings in the vector into char*
                             argv_vec.push_back((char*)split_args_vec[i].c_str());
                         }
                         
                         // add null pointer at the end of the vector
                         argv_vec.push_back(nullptr);
+
+                        // if the output file isn't empty, that means we're doing redirection
+                        if (!(output_file.empty()))
+                        {
+                            // setup output file for redirection; creat = open with the bottom flags
+                            // O_CREAT = create the file if it doesn't exist
+                            // O_WRONGLY = write permissions
+                            // O_TRUNC = if file already exists and allows writing, truncate to length 0
+                            // S_IRWXU = file owner has read, write and execute permission (have to have mode when using O_CREAT or O_TRUNC)
+                            newfd = creat(output_file.c_str(), S_IRWXU);
+
+                            // double check newfd is viable/can be opened
+                            if (newfd < 0) 
+                            {
+                                write(STDERR_FILENO, error_message, strlen(error_message)); 
+                                exit(1);
+                            }
+
+                            // use dup2 to redirect output (including errors) to our output_file newfd before execv is run
+                            // TO DO: ask TA about audio not being recorded lol
+                            dup2(newfd, STDOUT_FILENO);
+                            dup2(newfd, STDERR_FILENO);
+                            close(newfd);
+                        }
 
                         // use .data() so the vector can be treated as an array/pointers
                         execv(full_path.c_str(), argv_vec.data());
@@ -221,7 +290,6 @@ int main(int argc, char *argv[])
                         write(STDERR_FILENO, error_message, strlen(error_message)); 
                         exit(1);
                     }
-
 
                     else if (pid > 0) // in parent process, store child process for later
                     {

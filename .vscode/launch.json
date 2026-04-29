@@ -2,6 +2,8 @@
     "version": "0.2.0",
     "configurations": [
 
+
+
         {
             "name": "Debug wcat",
             "type": "cppdbg",
@@ -67,7 +69,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/project1/initial-utilities/wunzip/wunzip",
-            "args": ["tests/6.in"],
+            "args": ["tests/11.in"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/project1/initial-utilities/wunzip",
             "environment": [],
@@ -87,8 +89,9 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/project2/processes-shell/wish",
-            "args": [],
-            "stopAtEntry": true,
+            "args": ["tests/2.in"],
+            "stopAtEntry": false,
+            "externalConsole": false,
             "cwd": "${workspaceFolder}/project2/processes-shell",
             "environment": [],
             "console": "integratedTerminal",
@@ -96,19 +99,14 @@
             "setupCommands": [
                 {
                     "description": "Follow fork mode",
-                    "text": "-gdb-set follow-fork-mode parent",
+                    "text": "-gdb-set follow-fork-mode child",
                     "ignoreFailures": true
                 },
                 {
                     "description": "Detach on fork",
-                    "text": "-gdb-set detach-on-fork on",
+                    "text": "-gdb-set detach-on-fork off",
                     "ignoreFailures": true
-                },
-                {
-                "description": "Follow exec",
-                "text": "-gdb-set follow-exec-mode new",
-                "ignoreFailures": true
-                }   
+                }
             ]
         }
     ]
